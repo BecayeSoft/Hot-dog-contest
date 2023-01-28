@@ -1,0 +1,351 @@
+---
+title: "Nathan's Hot Dog Eating Contest"
+date: "2022-12-23"
+duration: "13h15min"
+---
+
+# Nathan's Hot Dog Eating Contest
+
+The hot dogs and buns contest is an international competition where competitors try to eat the most hot dogs in 12 minutes (formerly 10 minutes). I am going to scrape data on the contest from Wikipedia for visualization purposes. 
+
+The goal is to visualize the winners of the contest each year and to highlight each new record established. To do so, I am going to need the *name* of the winner, the *year*, and *new* *record* info.
+
+**N.B***:* The original idea of the graph comes from the awesome book "Visualize This" by Nathan Yau. Nevertheless, I am going to do it my way by scraping and organizing data instead of downloading the clean CSV file from [http://datasets.flowingdata.com/hot-dog-contest-winners.csv](http://datasets.flowingdata.com/hot-dog-contest-winners.csv%22,).
+
+## Scrapping the data from Wikipedia
+
+```{r}
+# install.packages("tidyverse")
+library(rvest)
+
+URL = "https://en.wikipedia.org/wiki/Nathan%27s_Hot_Dog_Eating_Contest"
+webpage = read_html(URL)
+
+# get all tables on the wikipedia pages
+tables <- webpage %>% html_elements("table")
+
+# the second table is the one that contains our data
+# R indices start with 1 :)
+hdb_winners <- tables[2]
+```
+
+```{r}
+hdb_winners
+```
+
+## Data Pre-processing
+
+### Extracting the text from table rows
+
+```{r}
+hdb_winners_rows <- hdb_winners %>% 
+  html_elements("tr") %>% 
+  html_text2()
+```
+
+```{r}
+print(hdb_winners_rows[1:5])
+```
+
+### Removing the header
+
+```{r}
+hdb_winners_rows <- hdb_winners_rows[-1]
+```
+
+```{r}
+print(hdb_winners_rows[1:5])
+```
+
+### Splitting each row and storing it into a vector
+
+We take data from 1997 till 2022 since data is inconsistent before and then split each row to extract the columns.
+
+```{r}
+winners <- c()
+last_year <- 38
+for ( i in 1:last_year ) {
+  tmp <- strsplit(hdb_winners_rows[i], split = '\t')
+  winners <- c(winners, tmp)
+}
+```
+
+```{r}
+print(hdb_winners_rows[1:4])
+```
+
+### Sorting the table in ascending year order
+
+```{r}
+winners <- rev(winners)
+```
+
+```{r}
+print(winners[35:38])
+```
+
+We notice that during the same year, the man and the woman share the year, the duration and the grades. This shared data is stored in the man's row. The woman's row contains only the name and the number of hot dogs and buns consumed.
+
+With that said, let's add the missing data to the woman's row.
+
+### Separating men and women
+
+Between 2011 - 2022, there's a text ("MEN'S" or "WOMEN'S") before the name to indicate the gender. To deal with these years, we check if the name starts with "MEN'S" or "WOMEN'S". If it does, we extract only the name.\
+E.g.: "WOMEN'S\\nMiki Sudo" will result in "Miki Sudo".
+
+```{r cars}
+women <- array(dim=c(12, 5))
+men_nrows = length(winners)- nrow(women) # 38 - 12 = 26 rows
+men <- array(dim = c( men_nrows, 5) ) 
+
+j = 1
+k = 1
+for ( i in 1:length(winners) ) {
+  
+  # For women, append year, duration, notes 
+  if (startsWith(winners[[i]][1], "WOMEN'S")) {
+    
+    # stealing info from the man's data 
+    year <- winners[[i-1]][1]
+    duration <- winners[[i-1]][4]
+    notes  <- winners[[i-1]][5]
+    
+    # getting the woman info
+    # extract name (column 1 for women)
+    name = strsplit(winners[[i]][1], split = '\n')[[1]][2]
+    nb_hdogs = winners[[i]][2]
+    
+    # filling in each row of the women array
+    women[j,] <- c( year, name, nb_hdogs, duration, notes)
+    j <- j+1
+    
+  } else {
+    men[k,] <- winners[[i]]
+    
+    # extract name (column 2 for men)
+    if (startsWith(winners[[i]][2], "MEN'S")) {
+      men[k,2] <- strsplit(winners[[i]][2], split = '\n')[[1]][2]
+    } else {
+      men[k,2] <- winners[[i]][2]
+    }
+    
+    k <- k+1
+  }
+}
+```
+
+```{r}
+print(women[1,])
+```
+
+```{r}
+print(men[1,])
+```
+
+Now, I see another problem here. "Hot dogs and buns eaten" and "Duration" often contain characters.
+
+### Extracting numbers from "Hot dogs and buns" eaten and "Duration"
+
+The regex expression `\\D*(\\d+).*", "\\1` extracts the first number in a string. We use it to retrieve the first number in "Hots dogs and buns eaten" and in "Duration".
+
+Also note that we use `nrow()` instead of `length()` which returns rows X cols.
+
+#### women
+
+```{r}
+for ( i in 1:nrow(women) ) {
+  # HDB eaten
+  women[i,3] <- as.numeric(gsub("\\D*(\\d+).*", "\\1", women[i,3]))
+  # duration
+  women[i,4] <- as.numeric(gsub("\\D*(\\d+).*", "\\1", women[i,4]))
+}
+```
+
+```{r}
+women[1,]
+```
+
+#### men
+
+```{r}
+for ( i in 1:nrow(men) ) {
+  # HDB eaten
+  men[i,3] <- as.numeric(gsub("\\D*(\\d+).*", "\\1", men[i,3]))
+  # duration
+  men[i,4] <- as.numeric(gsub("\\D*(\\d+).*", "\\1", men[i,4]))
+}
+```
+
+```{r}
+men[1,]
+```
+
+### Creating a record column
+
+For visualization purpose, it might be interesting to have a record column to see if the number of hot dogs and buns eaten was a new record that year.
+
+#### women
+
+```{r}
+record <- 0
+women_records <- c()
+
+for ( i in 1:nrow(women) ) {
+  if (women[i,3] > record) {
+    record <- women[i,3]
+    women_records <- c(women_records, 1)
+  } else {
+    women_records <- c(women_records, 0)
+  }
+}
+```
+
+```{r}
+women_records
+```
+
+#### men
+
+```{r}
+record <- 0
+men_records <- c()
+
+for ( i in 1:nrow(men) ) {
+  if (men[i,3] > record) {
+    record <- men[i,3]
+    men_records <- c(men_records, 1)
+  } else {
+    men_records <- c(men_records, 0)
+  }
+}
+```
+
+```{r}
+men_records
+```
+
+### Merging the records with women and men arrays
+
+```{r}
+women <-cbind(women, women_records)
+men <-cbind(men, men_records)
+
+```
+
+```{r}
+print(women[1,])
+```
+
+```{r}
+print(men[1,])
+```
+
+### Loading woman and men data into two separate Data frames
+
+Women first, as always :)
+
+#### Women data frame
+
+```{r}
+colnames(women) <- c("Year", "Name", "Hot dogs and buns eaten", "Duration (min)", "Notes", "isRecord")
+df_women = data.frame(women)
+```
+
+```{r}
+print(df_women)
+```
+
+#### Men data frame
+
+```{r}
+colnames(men) <- c("Year", "Name", "Hot dogs and buns eaten", "Duration (min)", "Notes", "isRecord")
+df_men = data.frame(men)
+```
+
+```{r}
+print(df_men)
+```
+
+### Converting data to numeric
+
+Finally, oh yeah... I said FINALLY! we convert "*Year*"*,* "*Hot dogs and buns eaten",* and"*Duration"* to numeric.
+
+```{r}
+df_women$Year = as.numeric(df_women$Year)
+df_women$Hot.dogs.and.buns.eaten = as.numeric(df_women$Hot.dogs.and.buns.eaten)
+df_women$Duration..min. = as.numeric(df_women$Duration..min.)
+```
+
+```{r}
+print(paste("Year: ", class(df_women$Year)))
+print(paste("Hot.dogs.and.buns.eaten: ", class(df_women$Hot.dogs.and.buns.eaten)))
+print(paste("Duration: ", class(df_women$Duration..min.)))
+```
+
+#### men
+
+```{r}
+df_men$Year = as.numeric(df_men$Year)
+df_men$Hot.dogs.and.buns.eaten = as.numeric(df_men$Hot.dogs.and.buns.eaten)
+df_men$Duration..min. = as.numeric(df_men$Duration..min.)
+```
+
+```{r}
+print(paste("Year: ", class(df_men$Year)))
+print(paste("Hot.dogs.and.buns.eaten: ", class(df_men$Hot.dogs.and.buns.eaten)))
+print(paste("Duration: ", class(df_men$Duration..min.)))
+```
+
+## Visualizing our beautifully formatted data
+
+Whew! It was hell of an adventure. Now it's time to have fun! Let's make some nice plots to visualize our clean data.
+
+```{r}
+# Highlighting records
+fill_colors <- c()
+
+for ( i in 1:nrow(df_men) ) {
+  
+  if (df_men$isRecord[i] == 1)
+    fill_colors <- c(fill_colors, "#29966c")
+  else
+    fill_colors <- c(fill_colors, "#cccccc")
+}
+
+barplot(df_men$Hot.dogs.and.buns.eaten, names.arg=df_men$Year, col=fill_colors,
+        border=NA, space=0.3, xlab='Year', ylab="Hot dogs and buns (HDB) eaten",
+        main = "Nathan's Hot Dog Eating  Contest Results, 1997 - 2022")
+
+```
+
+## Editing the graph for publishing
+
+![](HDB_barplot.png)
+
+## End notes
+
+### Review
+
+When I started this project, I didn't know much about R syntax, which explains why I spent a lot of time trying to understand how vectors, matrix, 2D array work. I have encountered many challenges, but hey, it didn't stop me. I know it might seem like it is nothing for more experienced Data scientist, but for me it's a big and motivating step towards my future bigger projects!
+
+### Possible improvements
+
+I stopped here, but I could have also extracted data from previous years and years when there were multiple competitions.
+
+-   MISSING_INFO = c("1973", "1968-1971", "1976-1977")
+
+-   MULTIPLE_CONTEST_IN_A\_YEAR = c(1972, 1974, 1986, 1993, 1996)
+
+### Bloopers :)
+
+Blooper 1: The 2008 year seemed completely off because I extracted number 595 from "59 Eat-off: 5". I fixed my regex pattern to extract only the first number.
+
+Blooper 2: The plot heights were all the same because I inadvertently put the year inside the number of hot dogs eaten and buns. `df_men$Hot.dogs.and.buns.eaten = as.numeric(df_men$Year)`
+
+Blooper 3: I was looping through length() of a 2D array instead of the number of rows. So I was getting an "out of bound" error.
+
+Blooper 4: Before 2011, there was no "MEN'S" before the row, but I was trying to split the strings to remove a "MEN'S" that did not exist. Which explains why I got a data frame full of "NA".
+
+Blooper 5: At first I didn't sort the data in ascending year, so I had to loop through the arrays from the end to create new records, which gave me 2 reversed vectors of records which did not match with the men and women arrays. Sorting by year before merging fixed it though.
+
+Blooper 5: All the challenges I bumped on and forgot about :)

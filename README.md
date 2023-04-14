@@ -1,5 +1,7 @@
 # Nathan-s-Hot-dog-Contests
-In this project, I scrape on the Nathan's Hot dog contest data from Wikipedia and tell a story behind of the competition with a graph.
+In this project, I scrape on the Nathan's Hot dog contest data from Wikipedia and tell my story behind of the competition.
+
+**TL;DR**: Find the notebook on [Rpubs](https://rpubs.com/becaye/hot-dogs-contest).
 
 ### Situation
 Can we use graphs to explain data in an engaging way?
@@ -12,6 +14,8 @@ Can we use graphs to explain data in an engaging way?
 
 ### Results
 I got beautifully formatted data and used them to tell my story.
+
+<img width="642" alt="image" src="https://user-images.githubusercontent.com/87549214/232169676-1f906820-e27b-4337-9aa5-30710f15d294.png">
 
 ---
 

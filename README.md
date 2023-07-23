@@ -1,7 +1,7 @@
 # Nathan-s-Hot-dog-Contests
 In this project, I scrape on the Nathan's Hot dog contest data from Wikipedia and tell my story behind of the competition.
 
-**TL;DR**: Find the notebook on [Rpubs](https://rpubs.com/becaye/hot-dogs-contest).
+**TL;DR**: Find the notebook on [Rpubs](https://rpubs.com/becaye/hot-dogs).
 
 ### Situation
 Can we use graphs to explain data in an engaging way?

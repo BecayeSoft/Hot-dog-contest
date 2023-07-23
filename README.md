@@ -15,7 +15,13 @@ Can we use graphs to explain data in an engaging way?
 ### Results
 I got beautifully formatted data and used them to tell my story.
 
-<img width="642" alt="image" src="https://user-images.githubusercontent.com/87549214/232169676-1f906820-e27b-4337-9aa5-30710f15d294.png">
+> Winners of the competition
+
+<img width="671" alt="image" src="https://github.com/BecayeSoft/Hot-dog-contest/assets/87549214/447bbc25-51dd-432b-8f47-5f885485671f">
+
+> Women VS Men
+> 
+<img width="714" alt="image" src="https://github.com/BecayeSoft/Hot-dog-contest/assets/87549214/d6c6c5a4-3189-468d-9386-812a5a9f2581">
 
 ---
 
